@@ -7,9 +7,11 @@ class BudgetService {
 
   static Future<Map<String, dynamic>> createBudget({
     required String name,
+    required String categoryId, // 🌟 التعديل 1: أضفنا معرف التصنيف
     required double allocatedAmount,
     required String renewalCycle,
     required String startRenewalDate,
+    required String overflowAction, // 🌟 التعديل 2: أضفنا إجراء تخطي الميزانية
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -27,9 +29,11 @@ class BudgetService {
         },
         body: {
           'name': name,
+          'category_id': categoryId, // 🌟 التحديث في الـ Body
           'allocated_amount': allocatedAmount.toString(),
           'renewal_cycle': renewalCycle,
           'start_renewal_date': startRenewalDate,
+          'overflow_action': overflowAction, // 🌟 التحديث في الـ Body
         },
       );
 

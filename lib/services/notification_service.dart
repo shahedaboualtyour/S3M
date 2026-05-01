@@ -74,20 +74,14 @@ class NotificationService {
     }
   }
 
-  // الاستماع لتحديث التوكن تلقائياً
   static void _listenToTokenRefresh() {
     _messaging.onTokenRefresh.listen((newToken) {
       print('🔄 تم تحديث التوكن تلقائياً: $newToken');
-      // 💡 هندسياً: هنا يجب إرسال التوكن الجديد للـ Backend فوراً
     });
   }
 
-  // ========================================================
-  // 3. جلب قائمة الإشعارات السابقة من الخادم (GET with Body)
-  // ========================================================
   static Future<Map<String, dynamic>> fetchNotifications() async {
     try {
-      // أ. جلب توكن المصادقة (Auth Token) لمعرفة من هو المستخدم
       final prefs = await SharedPreferences.getInstance();
       final String? authToken = prefs.getString('auth_token');
 
@@ -95,11 +89,9 @@ class NotificationService {
         return {'success': false, 'message': 'يرجى تسجيل الدخول أولاً'};
       }
 
-      // ب. جلب توكن الإشعارات الحالي ونوع الجهاز
       String? fcmToken = await initializeAndGetToken();
       String deviceType = getDeviceType();
 
-      // ج. الحيلة الهندسية لعمل طلب GET مع Body (كما يطلب الباك إند لديكِ)
       var request = http.Request('GET', Uri.parse('$baseUrl/notifications'));
 
       request.headers.addAll({
@@ -113,17 +105,12 @@ class NotificationService {
         "device_type": deviceType,
       });
 
-      // إرسال الطلب واستلام الرد
       http.StreamedResponse streamedResponse = await request.send();
       var responseBody = await streamedResponse.stream.bytesToString();
 
       if (streamedResponse.statusCode == 200) {
         var decodedData = jsonDecode(responseBody);
-        return {
-          'success': true,
-          'notifications':
-              decodedData, // قد تكون قائمة List أو Map حسب رد الباك إند
-        };
+        return {'success': true, 'notifications': decodedData};
       } else {
         return {'success': false, 'message': 'فشل جلب الإشعارات من الخادم'};
       }
@@ -133,7 +120,6 @@ class NotificationService {
     }
   }
 
-  // دالة مساعدة لمعرفة نوع الجهاز
   static String getDeviceType() {
     return Platform.isIOS ? 'ios' : 'android';
   }

@@ -82,6 +82,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
       allocatedAmount: _budgetAmount,
       renewalCycle: _selectedCycle,
       startRenewalDate: formattedDate,
+      categoryId:
+          "1", // مبدئياً سنضع 1، ولكن لاحقاً يجب أن نأخذه من اختيار المستخدم
+      overflowAction: "transfer_to_wallet",
     );
 
     if (!mounted) return;
