@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/budget_provider.dart';
 import 'login_screen.dart';
+import 'signup_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +30,7 @@ class SammedApp extends StatelessWidget {
         primaryColor: const Color(0xFF1E2147),
         fontFamily: 'Cairo',
       ),
-      home: const LoginScreen(),
+      home: const SignUpScreen(),
     );
   }
 }

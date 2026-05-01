@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// 🌟 لا تنسي استيراد خدمة الـ API التي أنشأناها في الخطوة السابقة 🌟
+import '../services/category_service.dart';
 
 class CategoriesScreen extends StatefulWidget {
   final List<Map<String, dynamic>> transactions;
@@ -46,10 +48,24 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     _localCategories.sort((a, b) => b['amount'].compareTo(a['amount']));
   }
 
+  // 🌟 دوال مساعدة لتحويل الألوان والأيقونات ليفهمها الـ Backend 🌟
+  String _colorToHex(Color color) {
+    return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+  }
+
+  String _iconToString(IconData icon) {
+    // يمكنك هنا عمل خريطة (Map) لتحويل الأيقونة لاسم نصي يفهمه الـ Backend
+    if (icon == Icons.fastfood) return 'food-icon';
+    if (icon == Icons.flight) return 'travel-icon';
+    if (icon == Icons.local_hospital) return 'health-icon';
+    return 'default-icon';
+  }
+
   void _showAddCategoryDialog() {
     String newName = '';
     IconData selectedIcon = Icons.star;
     Color selectedColor = const Color(0xFFF7A2C5);
+    bool isSaving = false; // 🌟 متغير جديد لتتبع حالة التحميل داخل النافذة 🌟
 
     List<IconData> availableIcons = [
       Icons.star,
@@ -104,13 +120,17 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                     onChanged: (value) => newName = value,
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'اختر أيقونة:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'اختر أيقونة:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 15,
+                    runSpacing: 10,
                     children: availableIcons
                         .map(
                           (icon) => GestureDetector(
@@ -132,13 +152,17 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         .toList(),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'اختر لوناً:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'اختر لوناً:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 15,
+                    runSpacing: 10,
                     children: availableColors
                         .map(
                           (color) => GestureDetector(
@@ -155,21 +179,69 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         .toList(),
                   ),
                   const SizedBox(height: 30),
+
                   ElevatedButton(
-                    onPressed: () {
-                      if (newName.isNotEmpty) {
-                        setState(() {
-                          _localCategories.add({
-                            'name': newName,
-                            'color': selectedColor,
-                            'icon': selectedIcon,
-                            'amount': 0.0,
-                            'percent': 0.0,
-                          });
-                        });
-                        Navigator.pop(context);
-                      }
-                    },
+                    onPressed: isSaving
+                        ? null
+                        : () async {
+                            if (newName.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('الرجاء إدخال اسم التصنيف'),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                              return;
+                            }
+
+                            setModalState(() {
+                              isSaving = true;
+                            });
+
+                            String hexColor = _colorToHex(selectedColor);
+                            String iconString = _iconToString(selectedIcon);
+
+                            final result = await CategoryService.createCategory(
+                              newName,
+                              iconString,
+                              hexColor,
+                            );
+
+                            if (!mounted) return;
+
+                            if (result['success']) {
+                              Navigator.pop(context);
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(result['message']),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+
+                              setState(() {
+                                _localCategories.add({
+                                  'id': result['category']['id'],
+                                  'name': newName,
+                                  'color': selectedColor,
+                                  'icon': selectedIcon,
+                                  'amount': 0.0,
+                                  'percent': 0.0,
+                                });
+                                _calculateCategoryData();
+                              });
+                            } else {
+                              setModalState(() {
+                                isSaving = false;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(result['message']),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF8262A4),
                       minimumSize: const Size(double.infinity, 50),
@@ -177,13 +249,24 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    child: const Text(
-                      'حفظ التصنيف',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+
+                    child: isSaving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'حفظ التصنيف',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 20),
                 ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import '../services/ai_service.dart';
+import '../services/ai_transaction_service.dart'; // 🌟 تأكدي من صحة اسم ملف الخدمة الجديدة
 
 class RecordScreen extends StatefulWidget {
   const RecordScreen({super.key});
@@ -19,10 +19,8 @@ class _RecordScreenState extends State<RecordScreen> {
 
   bool _isEnglish = false;
 
-  String _extractedAmount = '0.00';
-  String _extractedCategory = 'غير مصنف';
-  String _extractedDescription = '';
-  IconData _categoryIcon = Icons.help_outline;
+  // 🌟 استبدلنا المتغيرات المفردة بقائمة (List) لتستوعب عدة مصاريف 🌟
+  List<dynamic> _extractedTransactions = [];
 
   @override
   void initState() {
@@ -82,27 +80,15 @@ class _RecordScreenState extends State<RecordScreen> {
       _isAnalyzing = true;
     });
 
-    final aiResult = await AiService.analyzeExpense(text);
+    // 🌟 الاتصال بخدمة Groq AI الجديدة 🌟
+    final aiResult = await AiTransactionService.parseVoiceText(text);
 
-    if (aiResult != null && mounted) {
+    if (aiResult['success'] && mounted) {
       setState(() {
-        _extractedAmount = aiResult['amount'].toString();
-        _extractedDescription = aiResult['title'];
-        _extractedCategory = aiResult['category'];
-
-        if (_extractedCategory == 'أكل ومشروبات')
-          _categoryIcon = Icons.restaurant;
-        else if (_extractedCategory == 'مواصلات')
-          _categoryIcon = Icons.directions_car;
-        else if (_extractedCategory == 'تسوق')
-          _categoryIcon = Icons.shopping_bag;
-        else if (_extractedCategory == 'فواتير وخدمات')
-          _categoryIcon = Icons.receipt_long;
-        else
-          _categoryIcon = Icons.category;
-
+        // حفظ قائمة المعاملات القادمة من الخادم
+        _extractedTransactions = aiResult['transactions'];
         _isAnalyzing = false;
-        _currentState = 2;
+        _currentState = 2; // الانتقال لشاشة عرض النتائج
       });
     } else {
       if (mounted) {
@@ -114,14 +100,30 @@ class _RecordScreenState extends State<RecordScreen> {
           SnackBar(
             content: Text(
               _isEnglish
-                  ? 'Sorry, I couldn\'t understand that. Please try again.'
-                  : 'عذراً، لم أتمكن من فهمك جيداً. يرجى المحاولة مجدداً.',
+                  ? 'Sorry, AI error: ${aiResult['message']}'
+                  : 'عذراً، خطأ في الذكاء الاصطناعي: ${aiResult['message']}',
             ),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
+  }
+
+  // 🌟 دالة مساعدة لاختيار الأيقونة حسب اسم الميزانية القادم من الخادم 🌟
+  IconData _getIconForBudget(String? budgetName) {
+    if (budgetName == null) return Icons.category;
+    String nameLower = budgetName.toLowerCase();
+
+    if (nameLower.contains('food') || nameLower.contains('طعام'))
+      return Icons.restaurant;
+    if (nameLower.contains('transport') || nameLower.contains('مواصلات'))
+      return Icons.directions_car;
+    if (nameLower.contains('shop') || nameLower.contains('تسوق'))
+      return Icons.shopping_bag;
+    if (nameLower.contains('bill') || nameLower.contains('فواتير'))
+      return Icons.receipt_long;
+    return Icons.account_balance_wallet;
   }
 
   @override
@@ -136,7 +138,7 @@ class _RecordScreenState extends State<RecordScreen> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          _isEnglish ? 'Record Expense' : 'تسجيل مصروف',
+          _isEnglish ? 'Record Transaction' : 'تسجيل صوتي',
           style: const TextStyle(color: Colors.white),
         ),
       ),
@@ -237,9 +239,10 @@ class _RecordScreenState extends State<RecordScreen> {
         ),
         Text(
           _isEnglish
-              ? 'Example: "I paid 50 dollars for gas"'
-              : 'مثال: "والله صلحت سيارتي بـ 50 دولار"',
+              ? 'Ex: "I paid 50 for gas and 100 for food"'
+              : 'مثال: "دفعت 50 مواصلات و 100 أكل"',
           style: const TextStyle(color: Colors.white54),
+          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -256,7 +259,9 @@ class _RecordScreenState extends State<RecordScreen> {
         const SizedBox(height: 20),
         Text(
           _isAnalyzing
-              ? (_isEnglish ? 'Analyzing smartly...' : 'جاري التحليل بذكاء...')
+              ? (_isEnglish
+                    ? 'Analyzing with Groq AI...'
+                    : 'جاري التحليل عبر Groq AI...')
               : (_isEnglish ? 'Listening to you...' : 'جارٍ الاستماع إليك...'),
           style: const TextStyle(color: Colors.white, fontSize: 20),
         ),
@@ -283,117 +288,41 @@ class _RecordScreenState extends State<RecordScreen> {
     );
   }
 
+  // 🌟 واجهة النتائج المحدثة لتعرض قائمة (List) من المصاريف 🌟
   Widget _buildResultState() {
     return Padding(
       key: const ValueKey('result'),
       padding: const EdgeInsets.all(20.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             _isEnglish
-                ? '✨ Understood by AI'
-                : '✨ تم الفهم بفضل الذكاء الاصطناعي',
+                ? '✨ AI Extracted Transactions'
+                : '✨ المعاملات المستخرجة',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 30),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.grey.shade200,
-                      radius: 30,
-                      child: Icon(
-                        _categoryIcon,
-                        color: const Color(0xFF8262A4),
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _isEnglish ? 'Description' : 'الوصف',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            _extractedDescription,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 2,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          _isEnglish ? 'Amount' : 'المبلغ',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                        Text(
-                          '$_extractedAmount \$',
-                          style: const TextStyle(
-                            color: Color(0xFFF7A2C5),
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const Divider(height: 40),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildDetailItem(
-                      Icons.category,
-                      _isEnglish ? 'Category' : 'الفئة',
-                      _extractedCategory,
-                    ),
-                    _buildDetailItem(
-                      Icons.calendar_today,
-                      _isEnglish ? 'Date' : 'التاريخ',
-                      _isEnglish ? 'Today' : 'اليوم',
-                    ),
-                  ],
-                ),
-              ],
+          const SizedBox(height: 20),
+
+          // استخدام Expanded لكي تأخذ القائمة المساحة المتبقية ولا تسبب Overflow
+          Expanded(
+            child: ListView.builder(
+              itemCount: _extractedTransactions.length,
+              itemBuilder: (context, index) {
+                final tx = _extractedTransactions[index];
+                return _buildTransactionCard(tx);
+              },
             ),
           ),
-          const SizedBox(height: 40),
+
+          const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context, {
-                'title': _extractedDescription,
-                'amount': double.tryParse(_extractedAmount) ?? 0.0,
-                'category': _extractedCategory,
-                'icon': _categoryIcon,
-              });
+              // 🌟 انتبهي: نحن نرجع القائمة كاملة الآن، وليس عنصراً واحداً 🌟
+              Navigator.pop(context, _extractedTransactions);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF8262A4),
@@ -403,7 +332,7 @@ class _RecordScreenState extends State<RecordScreen> {
               ),
             ),
             child: Text(
-              _isEnglish ? 'Confirm & Add' : 'تأكيد وإضافة',
+              _isEnglish ? 'Confirm & Add All' : 'تأكيد وإضافة الكل',
               style: const TextStyle(
                 fontSize: 18,
                 color: Colors.white,
@@ -427,20 +356,80 @@ class _RecordScreenState extends State<RecordScreen> {
     );
   }
 
-  Widget _buildDetailItem(IconData icon, String title, String value) {
-    return Column(
-      children: [
-        Icon(icon, color: const Color(0xFF8262A4), size: 20),
-        Text(title, style: const TextStyle(color: Colors.grey, fontSize: 10)),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
+  // 🌟 تصميم بطاقة المعاملة الواحدة 🌟
+  Widget _buildTransactionCard(Map<String, dynamic> tx) {
+    String type = tx['type'] ?? 'expense'; // expense, income, donation
+    double amount = (tx['amount'] ?? 0).toDouble();
+    String? budgetName = tx['budget_name'];
+    String description = tx['description'] ?? '';
+
+    // تحديد اللون بناءً على النوع (مصروف أحمر، دخل أخضر، تبرع أزرق)
+    Color typeColor = type == 'income'
+        ? const Color(0xFF48CFAD)
+        : (type == 'donation'
+              ? const Color(0xFF5D9CEC)
+              : const Color(0xFFF7A2C5));
+    IconData icon = _getIconForBudget(budgetName);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: Colors.grey.shade200,
+            radius: 25,
+            child: Icon(icon, color: const Color(0xFF8262A4), size: 25),
           ),
-        ),
-      ],
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  budgetName ?? (_isEnglish ? 'Uncategorized' : 'غير مصنف'),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                type.toUpperCase(),
+                style: TextStyle(
+                  color: typeColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '$amount \$',
+                style: TextStyle(
+                  color: typeColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../services/budget_service.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -12,7 +13,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
   double _budgetAmount = 600.0;
   double _sliderMax = 5000.0;
   DateTime _startDate = DateTime.now();
-  DateTime _endDate = DateTime.now().add(const Duration(days: 30));
+
+  bool _isLoading = false;
+  String _selectedCycle = 'monthly';
+
+  final Map<String, String> _cycleOptions = {
+    'daily': 'يومي',
+    'weekly': 'أسبوعي',
+    'monthly': 'شهري',
+    'yearly': 'سنوي',
+  };
 
   final TextEditingController _amountController = TextEditingController(
     text: "600",
@@ -26,10 +36,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
     super.dispose();
   }
 
-  Future<void> _selectDate(BuildContext context, bool isStart) async {
+  Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: isStart ? _startDate : _endDate,
+      initialDate: _startDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
       builder: (context, child) {
@@ -43,11 +53,56 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
     if (picked != null) {
       setState(() {
-        if (isStart)
-          _startDate = picked;
-        else
-          _endDate = picked;
+        _startDate = picked;
       });
+    }
+  }
+
+  Future<void> _saveBudget() async {
+    String name = _nameController.text.trim();
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('الرجاء إدخال اسم الميزانية'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    String formattedDate = DateFormat('yyyy-MM-dd').format(_startDate);
+
+    final result = await BudgetService.createBudget(
+      name: name,
+      allocatedAmount: _budgetAmount,
+      renewalCycle: _selectedCycle,
+      startRenewalDate: formattedDate,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context, result['budget']);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -92,7 +147,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      // 🌟 حقل اسم الميزانية الجديد 🌟
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -156,7 +210,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         child: Column(
                           children: [
                             const Text(
-                              'المبلغ الشهري',
+                              'المبلغ',
                               style: TextStyle(
                                 color: Colors.grey,
                                 fontSize: 14,
@@ -239,7 +293,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'فترة الميزانية',
+                              'إعدادات التجديد',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 15),
@@ -247,7 +301,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               children: [
                                 Expanded(
                                   child: GestureDetector(
-                                    onTap: () => _selectDate(context, true),
+                                    onTap: () => _selectDate(context),
                                     child: _buildDateBox(
                                       'تاريخ البداية',
                                       DateFormat(
@@ -258,11 +312,64 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => _selectDate(context, false),
-                                    child: _buildDateBox(
-                                      'تاريخ النهاية',
-                                      DateFormat('yyyy-MM-dd').format(_endDate),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        const Text(
+                                          'دورة التجديد',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        DropdownButtonHideUnderline(
+                                          child: DropdownButton<String>(
+                                            value: _selectedCycle,
+                                            isExpanded: true,
+                                            icon: const Icon(
+                                              Icons.autorenew,
+                                              color: Color(0xFFF7A2C5),
+                                              size: 18,
+                                            ),
+                                            items: _cycleOptions.entries.map((
+                                              entry,
+                                            ) {
+                                              return DropdownMenuItem<String>(
+                                                value: entry.key,
+                                                child: Center(
+                                                  child: Text(
+                                                    entry.value,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                            onChanged: (String? newValue) {
+                                              if (newValue != null) {
+                                                setState(() {
+                                                  _selectedCycle = newValue;
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -276,37 +383,29 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 ),
               ),
 
-              // زر الحفظ
               Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: SizedBox(
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context, {
-                        'name': _nameController.text.isEmpty
-                            ? 'ميزانية عامة'
-                            : _nameController.text,
-                        'amount': _budgetAmount,
-                        'start': _startDate,
-                        'end': _endDate,
-                      });
-                    },
+                    onPressed: _isLoading ? null : _saveBudget,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF8262A4),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: const Text(
-                      'حفظ الميزانية',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'حفظ الميزانية',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -319,7 +418,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   Widget _buildDateBox(String title, String date) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 11),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(10),

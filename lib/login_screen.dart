@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import 'home_screen.dart';
+import 'services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,30 +13,58 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  void _login() {
+  bool _isLoading = false;
+
+  Future<void> _login() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    if (email == 'salam' && password == '2026') {
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('الرجاء إدخال البريد الإلكتروني وكلمة المرور'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final result = await AuthService.login(email, password);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.green,
+        ),
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم تسجيل الدخول بنجاح! مرحباً بك في صمد'),
-          backgroundColor: Colors.green,
-        ),
-      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('اسم المستخدم أو كلمة المرور غير صحيحة'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -49,10 +77,14 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.multitrack_audio, size: 80, color: Colors.white),
+              const Icon(
+                Icons.account_balance_wallet,
+                size: 80,
+                color: Colors.white,
+              ),
               const SizedBox(height: 20),
               const Text(
-                'Sammed 3l mghammed',
+                'صمد عالمغمض',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -69,8 +101,9 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _emailController,
                 style: const TextStyle(color: Colors.white),
+                keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: 'اسم المستخدم (اكتب: salam)',
+                  hintText: 'البريد الإلكتروني',
                   hintStyle: const TextStyle(color: Colors.white54),
                   filled: true,
                   fillColor: Colors.white.withValues(alpha: 0.1),
@@ -87,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 obscureText: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'كلمة المرور (اكتب: 2026)',
+                  hintText: 'كلمة المرور',
                   hintStyle: const TextStyle(color: Colors.white54),
                   filled: true,
                   fillColor: Colors.white.withValues(alpha: 0.1),
@@ -103,21 +136,31 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _login,
+                  onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFF7A2C5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
                     ),
                   ),
-                  child: const Text(
-                    'تسجيل دخول',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF1E2147),
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : const Text(
+                          'تسجيل دخول',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ],

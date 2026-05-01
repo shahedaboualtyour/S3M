@@ -5,6 +5,7 @@ import 'categories_screen.dart';
 import 'notifications_screen.dart';
 import 'transactions_screen.dart';
 import 'reports_screen.dart';
+import 'wallet_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -284,22 +285,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (updatedCategories != null)
                     setState(() => _categories = updatedCategories);
                 },
-                child: _buildNavItem(
-                  Icons.category,
-                  'التصنيفات',
-                  Colors.white54,
-                ),
+                child: _buildNavItem(Icons.category, 'محفظتي', Colors.white54),
               ),
+              // الزر الرابع: المحفظة (بدلاً من التصنيفات)
               GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ReportsScreen(),
-                  ),
-                ),
+                onTap: () async {
+                  // الانتقال إلى شاشة المحفظة
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WalletScreen(),
+                    ),
+                  );
+                },
                 child: _buildNavItem(
-                  Icons.bar_chart,
-                  'التقارير',
+                  Icons.account_balance_wallet, // أيقونة المحفظة
+                  'المحفظة',
                   Colors.white54,
                 ),
               ),
