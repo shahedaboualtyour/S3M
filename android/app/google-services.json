@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "324246619808",
+    "project_id": "sammed-3l-mghammed",
+    "storage_bucket": "sammed-3l-mghammed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:324246619808:android:7c3c56b72cd642c588abc5",
+        "android_client_info": {
+          "package_name": "com.example.sammed_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMxzZwC8Uiy7_aMXBHc5BgGkR9aNm-9MM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
