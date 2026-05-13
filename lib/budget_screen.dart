@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/budget_service.dart';
+// 🌟 أزلنا استيراد BudgetService لأننا لن نتصل بالباك إند حالياً 🌟
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -58,9 +58,27 @@ class _BudgetScreenState extends State<BudgetScreen> {
     }
   }
 
+  // 🌟 دالة مساعدة لحساب تاريخ الانتهاء بناءً على دورة التجديد 🌟
+  DateTime _calculateEndDate(DateTime start, String cycle) {
+    switch (cycle) {
+      case 'daily':
+        return start.add(const Duration(days: 1));
+      case 'weekly':
+        return start.add(const Duration(days: 7));
+      case 'monthly':
+        return DateTime(start.year, start.month + 1, start.day);
+      case 'yearly':
+        return DateTime(start.year + 1, start.month, start.day);
+      default:
+        return start.add(const Duration(days: 30));
+    }
+  }
+
+  // 🌟 تعديل دالة الحفظ لتعمل محلياً (Mock Data) 🌟
   Future<void> _saveBudget() async {
     String name = _nameController.text.trim();
 
+    // 1. التحقق من صحة البيانات (Validation)
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -72,41 +90,36 @@ class _BudgetScreenState extends State<BudgetScreen> {
     }
 
     setState(() {
-      _isLoading = true;
+      _isLoading = true; // تشغيل تأثير التحميل
     });
 
-    String formattedDate = DateFormat('yyyy-MM-dd').format(_startDate);
-
-    final result = await BudgetService.createBudget(
-      name: name,
-      allocatedAmount: _budgetAmount,
-      renewalCycle: _selectedCycle,
-      startRenewalDate: formattedDate,
-      categoryId:
-          "1", // مبدئياً سنضع 1، ولكن لاحقاً يجب أن نأخذه من اختيار المستخدم
-      overflowAction: "transfer_to_wallet",
-    );
+    // 2. محاكاة الاتصال بالخادم (تأخير لمدة ثانية ونصف)
+    await Future.delayed(const Duration(milliseconds: 1500));
 
     if (!mounted) return;
 
     setState(() {
-      _isLoading = false;
+      _isLoading = false; // إيقاف التحميل
     });
 
-    if (result['success']) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.green,
-        ),
-      );
+    // رسالة نجاح وهمية
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('تم إنشاء الميزانية بنجاح (محلياً)'),
+        backgroundColor: Colors.green,
+      ),
+    );
 
-      Navigator.pop(context, result['budget']);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
-      );
-    }
+    // 3. تجهيز بيانات الميزانية وإرسالها للشاشة السابقة (HomeScreen)
+    Map<String, dynamic> mockBudget = {
+      'name': name,
+      'amount': _budgetAmount,
+      'start': _startDate,
+      'end': _calculateEndDate(_startDate, _selectedCycle), // حساب النهاية
+    };
+
+    // إغلاق الشاشة وإرجاع البيانات
+    Navigator.pop(context, mockBudget);
   }
 
   @override
@@ -249,8 +262,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                       if (parsed != null) {
                                         setState(() {
                                           _budgetAmount = parsed;
-                                          if (parsed > _sliderMax)
+                                          if (parsed > _sliderMax) {
                                             _sliderMax = parsed;
+                                          }
                                         });
                                       }
                                     },

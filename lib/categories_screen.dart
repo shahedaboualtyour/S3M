@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-// 🌟 لا تنسي استيراد خدمة الـ API التي أنشأناها في الخطوة السابقة 🌟
-import '../services/category_service.dart';
+// 🌟 أزلنا استيراد CategoryService لأننا نختبر محلياً الآن 🌟
 
 class CategoriesScreen extends StatefulWidget {
   final List<Map<String, dynamic>> transactions;
@@ -33,7 +32,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     for (var cat in _localCategories) {
       double catTotal = 0.0;
       for (var tx in widget.transactions) {
-        if (tx['category'] == cat['name']) {
+        // نتحقق من اسم التصنيف (يجب أن يتطابق ما يأتي من المعاملات مع اسم التصنيف هنا)
+        if (tx['category'] == cat['name'] || tx['budget_name'] == cat['name']) {
           catTotal += tx['amount'];
         }
       }
@@ -48,24 +48,11 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     _localCategories.sort((a, b) => b['amount'].compareTo(a['amount']));
   }
 
-  // 🌟 دوال مساعدة لتحويل الألوان والأيقونات ليفهمها الـ Backend 🌟
-  String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-  }
-
-  String _iconToString(IconData icon) {
-    // يمكنك هنا عمل خريطة (Map) لتحويل الأيقونة لاسم نصي يفهمه الـ Backend
-    if (icon == Icons.fastfood) return 'food-icon';
-    if (icon == Icons.flight) return 'travel-icon';
-    if (icon == Icons.local_hospital) return 'health-icon';
-    return 'default-icon';
-  }
-
   void _showAddCategoryDialog() {
     String newName = '';
     IconData selectedIcon = Icons.star;
     Color selectedColor = const Color(0xFFF7A2C5);
-    bool isSaving = false; // 🌟 متغير جديد لتتبع حالة التحميل داخل النافذة 🌟
+    bool isSaving = false;
 
     List<IconData> availableIcons = [
       Icons.star,
@@ -198,49 +185,32 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                               isSaving = true;
                             });
 
-                            String hexColor = _colorToHex(selectedColor);
-                            String iconString = _iconToString(selectedIcon);
-
-                            final result = await CategoryService.createCategory(
-                              newName,
-                              iconString,
-                              hexColor,
-                            );
+                            // 🌟 1. محاكاة الاتصال بالخادم بانتظار ثانية واحدة 🌟
+                            await Future.delayed(const Duration(seconds: 1));
 
                             if (!mounted) return;
 
-                            if (result['success']) {
-                              Navigator.pop(context);
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(result['message']),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-
-                              setState(() {
-                                _localCategories.add({
-                                  'id': result['category']['id'],
-                                  'name': newName,
-                                  'color': selectedColor,
-                                  'icon': selectedIcon,
-                                  'amount': 0.0,
-                                  'percent': 0.0,
-                                });
-                                _calculateCategoryData();
+                            // 🌟 2. إضافة التصنيف محلياً 🌟
+                            setState(() {
+                              _localCategories.add({
+                                'id': DateTime.now().toString(), // ID وهمي
+                                'name': newName,
+                                'color': selectedColor,
+                                'icon': selectedIcon,
+                                'amount': 0.0,
+                                'percent': 0.0,
                               });
-                            } else {
-                              setModalState(() {
-                                isSaving = false;
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(result['message']),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
+                              _calculateCategoryData(); // إعادة حساب النسب
+                            });
+
+                            Navigator.pop(context); // إغلاق النافذة المنبثقة
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('تم إضافة التصنيف محلياً بنجاح'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
                           },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF8262A4),
@@ -249,7 +219,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-
                     child: isSaving
                         ? const SizedBox(
                             height: 20,
@@ -319,10 +288,15 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.pop(context, _localCategories);
-        return false;
+    // 🌟 التحديث لمعايير فلاتر الجديدة: استخدام PopScope بدلاً من WillPopScope 🌟
+    return PopScope(
+      canPop: false, // نمنع الرجوع التلقائي لنرسل البيانات أولاً
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        Navigator.pop(
+          context,
+          _localCategories,
+        ); // نرسل التصنيفات المحدثة عند الرجوع
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF0D1026),
@@ -623,7 +597,11 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               ),
             ),
             _buildNavItem(Icons.category, 'التصنيفات', const Color(0xFFF7A2C5)),
-            _buildNavItem(Icons.bar_chart, 'التقارير', Colors.white54),
+            _buildNavItem(
+              Icons.account_balance_wallet,
+              'المحفظة',
+              Colors.white54,
+            ), // توحيد مع الشاشة الرئيسية
           ],
         ),
       ),

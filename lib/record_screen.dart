@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import '../services/ai_transaction_service.dart'; // 🌟 تأكدي من صحة اسم ملف الخدمة الجديدة
+// 🌟 أزلنا استيراد AiTransactionService لأننا لن نتصل بالخادم حالياً 🌟
 
 class RecordScreen extends StatefulWidget {
   const RecordScreen({super.key});
@@ -19,7 +19,7 @@ class _RecordScreenState extends State<RecordScreen> {
 
   bool _isEnglish = false;
 
-  // 🌟 استبدلنا المتغيرات المفردة بقائمة (List) لتستوعب عدة مصاريف 🌟
+  // القائمة التي ستحمل المصاريف المستخرجة
   List<dynamic> _extractedTransactions = [];
 
   @override
@@ -43,12 +43,25 @@ class _RecordScreenState extends State<RecordScreen> {
       });
 
       _speech.listen(
-        localeId: _isEnglish ? 'en_US' : 'ar_SA',
+        // 🌟 1. تعديل اللهجة: يمكنك تركها تأخذ لغة الهاتف الافتراضية إذا كان هاتفك بالعربية
+        // أو استخدام 'ar_AE' (الإمارات) أحياناً تكون نماذج جوجل لها أقوى في فهم اللهجات المدمجة
+        localeId: _isEnglish ? 'en_US' : 'ar_AE',
+
+        // 🌟 2. وضع الإملاء (Dictation): يخبر النظام أننا نتحدث بجملة طويلة وليس مجرد كلمة قصيرة
+        listenMode: stt.ListenMode.dictation,
+
+        // 🌟 3. إظهار النتائج الجزئية ليتابع المستخدم ما يكتبه النظام
+        partialResults: true,
+
+        // 🌟 4. مدة الصمت: كم ثانية ينتظر النظام بعد توقفك عن الكلام قبل أن يغلق المايك
+        pauseFor: const Duration(seconds: 3),
+
         onResult: (result) {
           setState(() {
             _spokenText = result.recognizedWords;
           });
 
+          // عندما يتأكد النظام أنكِ أنهيتِ الجملة (بناءً على التوقف)
           if (result.finalResult) {
             _isListening = false;
             _analyzeSpokenText(_spokenText);
@@ -56,8 +69,17 @@ class _RecordScreenState extends State<RecordScreen> {
         },
       );
     } else {
+      // محاكاة إذا كان المايكروفون غير متوفر (على المحاكي مثلاً)
+      setState(() {
+        _currentState = 1;
+        _isAnalyzing = true;
+      });
+      _analyzeSpokenText("تجربة وهمية للمصاريف");
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('صلاحية المايكروفون غير متوفرة')),
+        const SnackBar(
+          content: Text('المايكروفون غير متوفر، جاري المحاكاة...'),
+        ),
       );
     }
   }
@@ -70,8 +92,9 @@ class _RecordScreenState extends State<RecordScreen> {
     });
   }
 
+  // 🌟 هنا التغيير الجوهري: تحويل التحليل إلى بيانات وهمية (Mock Data) 🌟
   Future<void> _analyzeSpokenText(String text) async {
-    if (text.isEmpty) {
+    if (text.isEmpty && mounted) {
       _stopListening();
       return;
     }
@@ -80,37 +103,37 @@ class _RecordScreenState extends State<RecordScreen> {
       _isAnalyzing = true;
     });
 
-    // 🌟 الاتصال بخدمة Groq AI الجديدة 🌟
-    final aiResult = await AiTransactionService.parseVoiceText(text);
+    // 1. محاكاة الانتظار (كأننا نتصل بـ Groq AI) لمدة ثانيتين
+    await Future.delayed(const Duration(seconds: 2));
 
-    if (aiResult['success'] && mounted) {
+    // 2. تجهيز بيانات وهمية متقنة تليق بتصميمك الرائع
+    final List<Map<String, dynamic>> mockAiTransactions = [
+      {
+        'type': 'expense',
+        'amount': 50.0,
+        'budget_name': _isEnglish ? 'Transport' : 'مواصلات',
+        'description': _isEnglish ? 'Taxi to work' : 'تاكسي للعمل',
+        'icon': Icons
+            .directions_car, // أضفنا الأيقونة لسهولة العرض في الشاشة الرئيسية
+      },
+      {
+        'type': 'expense',
+        'amount': 120.0,
+        'budget_name': _isEnglish ? 'Food' : 'طعام',
+        'description': _isEnglish ? 'Lunch with friends' : 'غداء مع الأصدقاء',
+        'icon': Icons.restaurant,
+      },
+    ];
+
+    if (mounted) {
       setState(() {
-        // حفظ قائمة المعاملات القادمة من الخادم
-        _extractedTransactions = aiResult['transactions'];
+        _extractedTransactions = mockAiTransactions;
         _isAnalyzing = false;
         _currentState = 2; // الانتقال لشاشة عرض النتائج
       });
-    } else {
-      if (mounted) {
-        setState(() {
-          _isAnalyzing = false;
-          _currentState = 0;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isEnglish
-                  ? 'Sorry, AI error: ${aiResult['message']}'
-                  : 'عذراً، خطأ في الذكاء الاصطناعي: ${aiResult['message']}',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
-  // 🌟 دالة مساعدة لاختيار الأيقونة حسب اسم الميزانية القادم من الخادم 🌟
   IconData _getIconForBudget(String? budgetName) {
     if (budgetName == null) return Icons.category;
     String nameLower = budgetName.toLowerCase();
@@ -261,7 +284,7 @@ class _RecordScreenState extends State<RecordScreen> {
           _isAnalyzing
               ? (_isEnglish
                     ? 'Analyzing with Groq AI...'
-                    : 'جاري التحليل عبر Groq AI...')
+                    : 'جاري التحليل...') // أزلنا ذكر الخادم
               : (_isEnglish ? 'Listening to you...' : 'جارٍ الاستماع إليك...'),
           style: const TextStyle(color: Colors.white, fontSize: 20),
         ),
@@ -288,7 +311,6 @@ class _RecordScreenState extends State<RecordScreen> {
     );
   }
 
-  // 🌟 واجهة النتائج المحدثة لتعرض قائمة (List) من المصاريف 🌟
   Widget _buildResultState() {
     return Padding(
       key: const ValueKey('result'),
@@ -306,8 +328,6 @@ class _RecordScreenState extends State<RecordScreen> {
             ),
           ),
           const SizedBox(height: 20),
-
-          // استخدام Expanded لكي تأخذ القائمة المساحة المتبقية ولا تسبب Overflow
           Expanded(
             child: ListView.builder(
               itemCount: _extractedTransactions.length,
@@ -317,11 +337,10 @@ class _RecordScreenState extends State<RecordScreen> {
               },
             ),
           ),
-
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {
-              // 🌟 انتبهي: نحن نرجع القائمة كاملة الآن، وليس عنصراً واحداً 🌟
+              // نعود إلى الشاشة السابقة ونرسل القائمة
               Navigator.pop(context, _extractedTransactions);
             },
             style: ElevatedButton.styleFrom(
@@ -356,14 +375,12 @@ class _RecordScreenState extends State<RecordScreen> {
     );
   }
 
-  // 🌟 تصميم بطاقة المعاملة الواحدة 🌟
   Widget _buildTransactionCard(Map<String, dynamic> tx) {
-    String type = tx['type'] ?? 'expense'; // expense, income, donation
+    String type = tx['type'] ?? 'expense';
     double amount = (tx['amount'] ?? 0).toDouble();
     String? budgetName = tx['budget_name'];
     String description = tx['description'] ?? '';
 
-    // تحديد اللون بناءً على النوع (مصروف أحمر، دخل أخضر، تبرع أزرق)
     Color typeColor = type == 'income'
         ? const Color(0xFF48CFAD)
         : (type == 'donation'

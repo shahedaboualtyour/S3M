@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+// تأكدي من وجود هذه الملفات في مشروعك
 import 'record_screen.dart';
 import 'budget_screen.dart';
 import 'categories_screen.dart';
 import 'notifications_screen.dart';
 import 'transactions_screen.dart';
-import 'reports_screen.dart';
 import 'wallet_screen.dart';
+// import 'reports_screen.dart'; // معطل حالياً لأنه غير مستخدم
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,9 +16,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // 1. تعريف المتغيرات المحلية
   List<Map<String, dynamic>> _budgets = [];
   int _currentBudgetIndex = 0;
-
   List<Map<String, dynamic>> _transactions = [];
 
   List<Map<String, dynamic>> _categories = [
@@ -48,12 +49,36 @@ class _HomeScreenState extends State<HomeScreen> {
     },
   ];
 
+  // 🌟 دالة التهيئة لوضع بيانات وهمية للتجربة (Mock Data) 🌟
+  @override
+  void initState() {
+    super.initState();
+    // ميزانية وهمية ابتدائية
+    _budgets = [
+      {
+        'name': 'ميزانية أيار',
+        'amount': 5000.0,
+        'spent': 1250.0,
+        'start': DateTime.now(),
+        'end': DateTime.now().add(const Duration(days: 12)),
+      },
+    ];
+
+    // معاملات وهمية ابتدائية
+    _transactions = [
+      {'title': 'قهوة الصباح', 'amount': 15.0, 'icon': Icons.local_cafe},
+      {'title': 'بنزين السيارة', 'amount': 100.0, 'icon': Icons.directions_car},
+      {'title': 'سوبر ماركت', 'amount': 250.0, 'icon': Icons.shopping_cart},
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color primaryBg = Color(0xFF0D1026);
     const Color accentPink = Color(0xFFF7A2C5);
     const Color cardColor = Color(0xFF1B1E3F);
 
+    // حسابات الميزانية الحالية
     double currentTotalBudget = 0.0;
     double currentSpent = 0.0;
     int daysLeft = 0;
@@ -113,6 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            // قسم عرض الميزانيات
             SizedBox(
               height: 280,
               child: PageView.builder(
@@ -130,6 +156,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             ),
+
+            // نقاط التمرير
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(_budgets.length + 1, (index) {
@@ -147,6 +175,8 @@ class _HomeScreenState extends State<HomeScreen> {
               }),
             ),
             const SizedBox(height: 30),
+
+            // الإحصائيات السريعة
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -171,6 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 30),
+
+            // آخر المعاملات
             const Align(
               alignment: Alignment.centerRight,
               child: Text(
@@ -195,6 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             else
+              // استخدام reversed لعرض أحدث المعاملات أولاً في القائمة
               ..._transactions.reversed.map(
                 (tx) => _buildTransactionItem(
                   tx['title'],
@@ -206,6 +239,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+
+      // شريط التنقل السفلي
       bottomNavigationBar: BottomAppBar(
         color: cardColor,
         padding: EdgeInsets.zero,
@@ -228,6 +263,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Colors.white54,
                 ),
               ),
+
+              // 🌟 زر المايكروفون مع التعديل الجديد لاستقبال القائمة (List) 🌟
               GestureDetector(
                 onTap: () async {
                   if (_budgets.isEmpty ||
@@ -242,18 +279,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     return;
                   }
 
-                  final newExpense = await Navigator.push(
+                  // الانتقال والانتظار حتى تعود البيانات من شاشة التسجيل
+                  final returnedData = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const RecordScreen(),
                     ),
                   );
 
-                  if (newExpense != null && newExpense is Map) {
+                  // 🌟 التأكد من أن البيانات العائدة ليست null وأنها من نوع List 🌟
+                  if (returnedData != null && returnedData is List) {
                     setState(() {
-                      _transactions.add(newExpense.cast<String, dynamic>());
-                      _budgets[_currentBudgetIndex]['spent'] +=
-                          newExpense['amount'];
+                      // المرور على كل مصروف قادم من القائمة وإضافته
+                      for (var expense in returnedData) {
+                        _transactions.add({
+                          'title': expense['description'],
+                          'amount': expense['amount'],
+                          'icon': expense['icon'] ?? Icons.category,
+                        });
+
+                        // خصم المبلغ من الميزانية الحالية
+                        _budgets[_currentBudgetIndex]['spent'] +=
+                            expense['amount'];
+                      }
                     });
                   }
                 },
@@ -271,6 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+
               GestureDetector(
                 onTap: () async {
                   final updatedCategories = await Navigator.push(
@@ -285,21 +334,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (updatedCategories != null)
                     setState(() => _categories = updatedCategories);
                 },
-                child: _buildNavItem(Icons.category, 'محفظتي', Colors.white54),
-              ),
-              // الزر الرابع: المحفظة (بدلاً من التصنيفات)
-              GestureDetector(
-                onTap: () async {
-                  // الانتقال إلى شاشة المحفظة
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const WalletScreen(),
-                    ),
-                  );
-                },
                 child: _buildNavItem(
-                  Icons.account_balance_wallet, // أيقونة المحفظة
+                  Icons.category,
+                  'التصنيفات',
+                  Colors.white54,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const WalletScreen()),
+                ),
+                child: _buildNavItem(
+                  Icons.account_balance_wallet,
                   'المحفظة',
                   Colors.white54,
                 ),
@@ -310,6 +357,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // --- دوال بناء الواجهة المساعدة ---
 
   Widget _buildEmptyBudgetCircle() {
     return GestureDetector(

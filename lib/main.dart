@@ -1,36 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'providers/budget_provider.dart';
-import 'login_screen.dart';
-import 'signup_screen.dart';
+import 'login_screen.dart'; // تأكدي من مسار ملف شاشة الدخول لديكِ
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await initializeDateFormatting('ar', null);
-
-  runApp(
-    MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => BudgetProvider())],
-      child: const SammedApp(),
-    ),
-  );
+void main() {
+  // أزلنا كل سطور Firebase والـ WidgetsFlutterBinding من هنا
+  runApp(const MyApp());
 }
 
-class SammedApp extends StatelessWidget {
-  const SammedApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'صمد عالمغمض',
+      title: 'صمد عالمغمض (نسخة الواجهات)',
+      debugShowCheckedModeBanner: false, // لإخفاء شريط Debug المزعج
       theme: ThemeData(
-        primaryColor: const Color(0xFF1E2147),
-        fontFamily: 'Cairo',
+        // إعداد ألوان التطبيق الأساسية
+        scaffoldBackgroundColor: const Color(0xFF0D1026),
+        primaryColor: const Color(0xFFF7A2C5),
+        fontFamily: 'Tajawal', // إذا كنتِ تستخدمين خطاً عربياً
       ),
-      home: const SignUpScreen(),
+      home: const LoginScreen(),
     );
   }
 }

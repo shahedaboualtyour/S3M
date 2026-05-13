@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'record_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -8,60 +9,70 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
-  // بيانات وهمية مؤقتة (Mock Data) لاحقاً سنربطها بالـ Provider أو API
-  final double totalSaved = 600.0;
+  late double _totalSaved;
+  late List<Map<String, dynamic>> _savingSources;
 
-  final List<Map<String, dynamic>> savingSources = [
-    {
-      'title': 'من محفظة الطعام',
-      'amount': 200,
-      'percentage': 33.3,
-      'icon': Icons.restaurant,
-      'color': const Color(0xFFF7A2C5),
-    },
-    {
-      'title': 'من محفظة السفر',
-      'amount': 200,
-      'percentage': 33.3,
-      'icon': Icons.flight,
-      'color': const Color(0xFF5D9CEC),
-    },
-    {
-      'title': 'من محفظة المدرسة',
-      'amount': 200,
-      'percentage': 33.3,
-      'icon': Icons.menu_book,
-      'color': const Color(0xFFAC92EC),
-    },
-    {
-      'title': 'من محفظة الرياضة',
-      'amount': 150,
-      'percentage': 25.0,
-      'icon': Icons.fitness_center,
-      'color': const Color(0xFFFFCE54),
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // 🌟 تحديث البيانات لتتطابق منطقياً مع ما يوجد في الشاشة الرئيسية 🌟
+    // الشاشة الرئيسية تعرض مصاريف (15, 100, 250).
+    // هنا سنفترض أننا وفرنا مبالغ أخرى من نفس التصنيفات لنضعها في المحفظة.
+
+    _totalSaved = 365.0; // مجموع التوفير الوهمي المتطابق
+
+    _savingSources = [
+      {
+        'title': 'وفر من قهوة الصباح',
+        'amount': 15,
+        'percentage': (15 / 365) * 100,
+        'icon': Icons.local_cafe,
+        'color': const Color(0xFFF7A2C5),
+      },
+      {
+        'title': 'وفر من بنزين السيارة',
+        'amount': 100,
+        'percentage': (100 / 365) * 100,
+        'icon': Icons.directions_car,
+        'color': const Color(0xFF5D9CEC),
+      },
+      {
+        'title': 'وفر من سوبر ماركت',
+        'amount': 250,
+        'percentage': (250 / 365) * 100,
+        'icon': Icons.shopping_cart,
+        'color': const Color(0xFFAC92EC),
+      },
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
-    // الألوان المعتمدة في تطبيقك
     const Color primaryBg = Color(0xFF0D1026);
     const Color cardColor = Color(0xFF1B1E3F);
     const Color accentPink = Color(0xFFF7A2C5);
 
     return Scaffold(
       backgroundColor: primaryBg,
-
-      // 1. الشريط العلوي (AppBar)
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.notifications_none, color: Colors.white),
-          onPressed: () {},
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline, color: accentPink),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('سيتم تفعيل الإضافة اليدوية قريباً'),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
             onPressed: () {},
@@ -90,14 +101,11 @@ class _WalletScreenState extends State<WalletScreen> {
           ],
         ),
       ),
-
-      // 2. جسم الشاشة
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 3. البطاقة العلوية (إجمالي المبلغ المجمد)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(25),
@@ -115,7 +123,6 @@ class _WalletScreenState extends State<WalletScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // الأيقونة أو الرسمة (استخدمنا أيقونة خزنة كبديل سريع للصورة)
                   Container(
                     width: 80,
                     height: 80,
@@ -129,8 +136,6 @@ class _WalletScreenState extends State<WalletScreen> {
                       size: 40,
                     ),
                   ),
-
-                  // النصوص والرصيد
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -140,7 +145,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        '${totalSaved.toInt()} \$',
+                        '${_totalSaved.toInt()} \$',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 36,
@@ -162,7 +167,7 @@ class _WalletScreenState extends State<WalletScreen> {
                             Icons.ac_unit,
                             color: Colors.cyan.shade300,
                             size: 14,
-                          ), // أيقونة تعبر عن التجميد
+                          ),
                         ],
                       ),
                     ],
@@ -172,7 +177,6 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
             const SizedBox(height: 30),
 
-            // 4. عنوان قسم "مصادر الإيداع"
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -197,16 +201,12 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
             const SizedBox(height: 15),
 
-            // 5. قائمة المصادر (ListView)
-            // نستخدم ListView.builder لأنها الأفضل في الأداء (Best Practice) لو كان لدينا عناصر كثيرة
             ListView.builder(
-              shrinkWrap:
-                  true, // ضروري عندما نضع ListView داخل SingleChildScrollView
-              physics:
-                  const NeverScrollableScrollPhysics(), // نمنع التمرير الداخلي لأن الشاشة كلها تمرر
-              itemCount: savingSources.length,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _savingSources.length,
               itemBuilder: (context, index) {
-                final source = savingSources[index];
+                final source = _savingSources[index];
                 return _buildSourceCard(
                   title: source['title'],
                   amount: source['amount'],
@@ -216,13 +216,14 @@ class _WalletScreenState extends State<WalletScreen> {
                 );
               },
             ),
+            const SizedBox(height: 50),
           ],
         ),
       ),
+      bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
-  // 🌟 أفضل ممارسة (Best Practice): استخراج واجهات الـ UI المكررة إلى دوال منفصلة 🌟
   Widget _buildSourceCard({
     required String title,
     required int amount,
@@ -234,12 +235,11 @@ class _WalletScreenState extends State<WalletScreen> {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1B1E3F), // لون البطاقة
+        color: const Color(0xFF1B1E3F),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          // الأيقونة بخلفية ملونة شفافة
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -249,8 +249,6 @@ class _WalletScreenState extends State<WalletScreen> {
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 15),
-
-          // النصوص الوسطى (الاسم والنسبة)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,11 +273,11 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                     ),
                     const Text(
-                      ' • من إجمالي المحفظة ',
+                      '  •  من إجمالي المحفظة ',
                       style: TextStyle(color: Colors.white38, fontSize: 10),
                     ),
                     Text(
-                      '$percentage%',
+                      '${percentage.toStringAsFixed(1)}%', // تنسيق النسبة لمنزلة عشرية واحدة
                       style: TextStyle(
                         color: color,
                         fontSize: 10,
@@ -291,8 +289,6 @@ class _WalletScreenState extends State<WalletScreen> {
               ],
             ),
           ),
-
-          // المبلغ بالموجب على اليسار
           Text(
             '+ $amount \$',
             style: const TextStyle(
@@ -303,6 +299,76 @@ class _WalletScreenState extends State<WalletScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context) {
+    return BottomAppBar(
+      color: const Color(0xFF1B1E3F),
+      padding: EdgeInsets.zero,
+      child: SizedBox(
+        height: 70,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: _buildNavItem(Icons.home, 'الرئيسية', Colors.white54),
+            ),
+            _buildNavItem(Icons.list_alt, 'المعاملات', Colors.white54),
+
+            GestureDetector(
+              onTap: () async {
+                final returnedData = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RecordScreen()),
+                );
+
+                if (returnedData != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('تم تسجيل المعاملة بنجاح!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFF7A2C5), Color(0xFF8262A4)],
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(Icons.mic, color: Colors.white, size: 32),
+                ),
+              ),
+            ),
+
+            _buildNavItem(Icons.category, 'التصنيفات', Colors.white54),
+            _buildNavItem(
+              Icons.account_balance_wallet,
+              'المحفظة',
+              const Color(0xFFF7A2C5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: color, size: 20),
+        Text(label, style: TextStyle(color: color, fontSize: 10)),
+      ],
     );
   }
 }

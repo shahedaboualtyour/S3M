@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'providers/budget_provider.dart';
+// 🌟 أزلنا استيراد Provider لأننا نستخدم بيانات وهمية محلية الآن 🌟
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -13,6 +12,57 @@ class TransactionsScreen extends StatefulWidget {
 class _TransactionsScreenState extends State<TransactionsScreen> {
   String _searchQuery = '';
 
+  // 🌟 1. مصفوفة المعاملات الوهمية (Mock Data) 🌟
+  // أضفنا تواريخ (date) لكي تعمل دالة التجميع الخاصة بكِ بشكل صحيح
+  late List<Map<String, dynamic>> _mockTransactions;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+
+    _mockTransactions = [
+      {
+        'title': 'قهوة الصباح',
+        'category': 'أكل ومشروبات',
+        'amount': 15.0,
+        'icon': Icons.local_cafe,
+        'date': now, // اليوم
+      },
+      {
+        'title': 'بنزين السيارة',
+        'category': 'مواصلات',
+        'amount': 100.0,
+        'icon': Icons.directions_car,
+        'date': now, // اليوم
+      },
+      {
+        'title': 'سوبر ماركت',
+        'category': 'تسوق',
+        'amount': 250.0,
+        'icon': Icons.shopping_cart,
+        'date': now.subtract(const Duration(days: 1)), // أمس
+      },
+      {
+        'title': 'فاتورة الكهرباء',
+        'category': 'فواتير وخدمات',
+        'amount': 300.0,
+        'icon': Icons.receipt,
+        'date': now.subtract(const Duration(days: 3)), // تاريخ قديم
+      },
+      {
+        'title': 'غداء مع الأصدقاء',
+        'category': 'أكل ومشروبات',
+        'amount': 120.0,
+        'icon': Icons.restaurant,
+        'date': now.subtract(
+          const Duration(days: 3),
+        ), // نفس التاريخ القديم للتجميع
+      },
+    ];
+  }
+
+  // دالة تحويل التاريخ إلى عنوان (اليوم، أمس، أو التاريخ نصياً)
   String _getDateHeader(DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -21,24 +71,26 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
     if (targetDate == today) return 'اليوم';
     if (targetDate == yesterday) return 'أمس';
-    return DateFormat('dd MMMM', 'ar').format(date);
+
+    // استخدام التنسيق الإنجليزي مؤقتاً لتجنب أخطاء حزمة intl مع اللغة العربية إذا لم تكن مهيأة
+    return DateFormat('dd MMMM yyyy').format(date);
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<BudgetProvider>(context);
+    // 🌟 2. فلترة البيانات محلياً بناءً على البحث 🌟
+    List<Map<String, dynamic>> filteredTransactions = _mockTransactions.where((
+      tx,
+    ) {
+      return tx['title'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
+          tx['category'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          );
+    }).toList();
 
-    List<Map<String, dynamic>> filteredTransactions = provider.transactions
-        .where((tx) {
-          return tx['title'].toString().toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ) ||
-              tx['category'].toString().toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              );
-        })
-        .toList();
-
+    // 🌟 3. تجميع البيانات (Grouping) حسب التاريخ 🌟
     Map<String, List<Map<String, dynamic>>> groupedTransactions = {};
     for (var tx in filteredTransactions) {
       String header = _getDateHeader(tx['date']);
@@ -74,7 +126,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(width: 48),
+                  const SizedBox(width: 48), // لموازنة العنوان في المنتصف
                 ],
               ),
             ),
@@ -92,6 +144,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 25),
+
+                    // شريط البحث
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20.0),
                       child: Container(
@@ -125,6 +179,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // قائمة المعاملات المجمعة
                     Expanded(
                       child: filteredTransactions.isEmpty
                           ? Center(
@@ -259,7 +315,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               onTap: () => Navigator.pop(context),
               child: _buildNavItem(Icons.home, 'الرئيسية', Colors.white54),
             ),
-            _buildNavItem(Icons.list_alt, 'المعاملات', const Color(0xFFF7A2C5)),
+            _buildNavItem(
+              Icons.list_alt,
+              'المعاملات',
+              const Color(0xFFF7A2C5),
+            ), // المفعلة حالياً
             Container(
               width: 60,
               height: 60,
@@ -274,7 +334,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               ),
             ),
             _buildNavItem(Icons.category, 'التصنيفات', Colors.white54),
-            _buildNavItem(Icons.bar_chart, 'التقارير', Colors.white54),
+            // 🌟 توحيد مع باقي الشاشات: المحفظة بدلاً من التقارير 🌟
+            _buildNavItem(
+              Icons.account_balance_wallet,
+              'المحفظة',
+              Colors.white54,
+            ),
           ],
         ),
       ),
